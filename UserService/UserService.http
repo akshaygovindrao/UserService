@@ -1,0 +1,38 @@
+@UserService_HostAddress = http://localhost:5176
+
+### Register a new user
+POST {{UserService_HostAddress}}/api/authentication/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+### Log in and capture the JWT for the requests below
+# @name login
+POST {{UserService_HostAddress}}/api/authentication/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+###
+
+@authToken = {{login.response.body.$.token}}
+
+### Get all users, first page (requires JWT)
+GET {{UserService_HostAddress}}/api/users?pageSize=50
+Authorization: Bearer {{authToken}}
+
+### Get the next page using the previous response's nextCursor (requires JWT)
+GET {{UserService_HostAddress}}/api/users?cursor=00000000-0000-0000-0000-000000000000&pageSize=50
+Authorization: Bearer {{authToken}}
+
+### Log out (requires JWT)
+POST {{UserService_HostAddress}}/api/authentication/logout
+Authorization: Bearer {{authToken}}
+
+###
