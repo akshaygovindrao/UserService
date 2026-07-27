@@ -1,4 +1,4 @@
-﻿---
+---
 description: Review and commit all project changes
 argument-hint: [optional context/hint]
 ---

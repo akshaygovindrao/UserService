@@ -1,4 +1,4 @@
-﻿---
+---
 description: Create a new Git branch from an existing branch
 argument-hint: <source-branch> <new-branch>
 ---
