@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using UserService.Dtos;
 using UserService.Features.Authentication.Login;
 using UserService.Features.Authentication.Logout;
+using UserService.Features.Authentication.Refresh;
 using UserService.Features.Authentication.Register;
 
 namespace UserService.Controllers;
@@ -35,12 +36,20 @@ public class AuthenticationController : ControllerBase
         return Ok(response);
     }
 
+    // POST api/authentication/refresh
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+    {
+        var response = await _mediator.Send(new RefreshCommand(request.RefreshToken));
+        return Ok(response);
+    }
+
     // POST api/authentication/logout
     [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout()
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request)
     {
-        await _mediator.Send(new LogoutCommand());
+        await _mediator.Send(new LogoutCommand(request.RefreshToken));
         return NoContent();
     }
 }

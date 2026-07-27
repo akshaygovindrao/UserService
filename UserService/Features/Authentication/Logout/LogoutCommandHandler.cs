@@ -1,13 +1,20 @@
 using MediatR;
+using UserService.Security;
 
 namespace UserService.Features.Authentication.Logout;
 
 public class LogoutCommandHandler : IRequestHandler<LogoutCommand, Unit>
 {
-    public Task<Unit> Handle(LogoutCommand request, CancellationToken cancellationToken)
+    private readonly IRefreshTokenService _refreshTokenService;
+
+    public LogoutCommandHandler(IRefreshTokenService refreshTokenService)
     {
-        // JWTs are stateless: there is no server-side session to invalidate here.
-        // The client is responsible for discarding the token.
-        return Task.FromResult(Unit.Value);
+        _refreshTokenService = refreshTokenService;
+    }
+
+    public async Task<Unit> Handle(LogoutCommand request, CancellationToken cancellationToken)
+    {
+        await _refreshTokenService.RevokeAsync(request.RefreshToken, cancellationToken);
+        return Unit.Value;
     }
 }

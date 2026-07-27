@@ -11,15 +11,18 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _tokenGenerator;
+    private readonly IRefreshTokenService _refreshTokenService;
 
     public LoginCommandHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        IJwtTokenGenerator tokenGenerator)
+        IJwtTokenGenerator tokenGenerator,
+        IRefreshTokenService refreshTokenService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _tokenGenerator = tokenGenerator;
+        _refreshTokenService = refreshTokenService;
     }
 
     public async Task<AuthResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -30,7 +33,9 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
             throw new InvalidCredentialsException();
         }
 
-        var token = _tokenGenerator.GenerateToken(user);
-        return new AuthResponse(token);
+        var accessToken = _tokenGenerator.GenerateToken(user);
+        var refreshToken = await _refreshTokenService.GenerateAndStoreAsync(user.Id, cancellationToken);
+
+        return new AuthResponse(accessToken, refreshToken);
     }
 }

@@ -31,7 +31,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "Enter the JWT token returned from /login or /register."
+        Description = "Enter the JWT access token returned from /login."
     });
 
     options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
@@ -64,6 +64,13 @@ builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+builder.Services.Configure<RefreshTokenSettings>(builder.Configuration.GetSection(RefreshTokenSettings.SectionName));
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+});
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
     ?? throw new InvalidOperationException("Missing 'Jwt' configuration section.");
