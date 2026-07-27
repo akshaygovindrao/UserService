@@ -19,4 +19,9 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include=".claude\commands\commit-changes.md" />
+    <None Include=".claude\commands\create-branch.md" />
+  </ItemGroup>
+
 </Project>
