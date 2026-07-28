@@ -6,12 +6,22 @@ namespace UserService.Features.Users.GetAllUsers;
 
 public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, UserPageResponse>
 {
+    #region Fields
+
     private readonly IUserRepository _userRepository;
+
+    #endregion
+
+    #region Constructors
 
     public GetAllUsersQueryHandler(IUserRepository userRepository)
     {
         _userRepository = userRepository;
     }
+
+    #endregion
+
+    #region Public Methods
 
     public async Task<UserPageResponse> Handle(GetAllUsersQuery request, CancellationToken cancellationToken)
     {
@@ -25,4 +35,6 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, UserPag
             page.Select(u => new UserProfileResponse(u.Id, u.Email)).ToList(),
             nextCursor);
     }
+
+    #endregion
 }

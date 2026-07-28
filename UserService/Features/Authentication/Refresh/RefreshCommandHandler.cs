@@ -8,9 +8,15 @@ namespace UserService.Features.Authentication.Refresh;
 
 public class RefreshCommandHandler : IRequestHandler<RefreshCommand, AuthResponse>
 {
+    #region Fields
+
     private readonly IUserRepository _userRepository;
     private readonly IJwtTokenGenerator _tokenGenerator;
     private readonly IRefreshTokenService _refreshTokenService;
+
+    #endregion
+
+    #region Constructors
 
     public RefreshCommandHandler(
         IUserRepository userRepository,
@@ -21,6 +27,10 @@ public class RefreshCommandHandler : IRequestHandler<RefreshCommand, AuthRespons
         _tokenGenerator = tokenGenerator;
         _refreshTokenService = refreshTokenService;
     }
+
+    #endregion
+
+    #region Public Methods
 
     public async Task<AuthResponse> Handle(RefreshCommand request, CancellationToken cancellationToken)
     {
@@ -41,4 +51,6 @@ public class RefreshCommandHandler : IRequestHandler<RefreshCommand, AuthRespons
 
         return new AuthResponse(accessToken, newRefreshToken);
     }
+
+    #endregion
 }

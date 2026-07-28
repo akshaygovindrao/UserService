@@ -13,12 +13,22 @@ namespace UserService.Controllers;
 [Route("api/[controller]")]
 public class AuthenticationController : ControllerBase
 {
+    #region Fields
+
     private readonly IMediator _mediator;
+
+    #endregion
+
+    #region Constructors
 
     public AuthenticationController(IMediator mediator)
     {
         _mediator = mediator;
     }
+
+    #endregion
+
+    #region Public Methods
 
     // POST api/authentication/register
     [HttpPost("register")]
@@ -52,4 +62,6 @@ public class AuthenticationController : ControllerBase
         await _mediator.Send(new LogoutCommand(request.RefreshToken));
         return NoContent();
     }
+
+    #endregion
 }

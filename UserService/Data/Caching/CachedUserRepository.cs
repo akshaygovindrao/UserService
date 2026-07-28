@@ -1,98 +1,142 @@
-using Microsoft.Extensions.Caching.Memory;
-using UserService.Common.Caching;
+using System.Text.Json;
+using Microsoft.Extensions.Caching.Distributed;
 using UserService.Domain;
 
 namespace UserService.Data.Caching;
 
-// Decorates IUserRepository with an in-memory read cache. Any write (add/update/delete)
-// invalidates every cached entry via ICacheInvalidator<User>, since the cheap alternative -
-// individually keyed invalidation across GetById/GetByEmail/GetPage(cursor,size) combinations -
-// would need to track every key ever issued.
+// Decorates IUserRepository with a Redis-backed read cache shared across every instance.
+// Cache keys embed a version number stored in Redis; any write bumps the version so every
+// existing key becomes unreachable at once instead of being deleted individually - avoids
+// tracking every key ever issued across GetById/GetByEmail/GetPage(cursor,size) combinations.
+// Orphaned entries simply expire via their own TTL.
 public class CachedUserRepository : IUserRepository
 {
+    #region Fields
+
+    private const string VersionKey = "cache-version:user";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
     private readonly IUserRepository _inner;
-    private readonly IMemoryCache _cache;
-    private readonly ICacheInvalidator<User> _invalidator;
+    private readonly IDistributedCache _cache;
 
-    public CachedUserRepository(IUserRepository inner, IMemoryCache cache, ICacheInvalidator<User> invalidator)
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    #endregion
+
+    #region Constructors
+
+    public CachedUserRepository(
+        IUserRepository inner,
+        IDistributedCache cache)
     {
         _inner = inner;
         _cache = cache;
-        _invalidator = invalidator;
     }
 
-    public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
+    #endregion
+
+    #region Private Methods
+
+    private async Task<T?> GetOrCreateAsync<T>(
+        string key,
+        Func<Task<T?>> factory,
+        CancellationToken ct)
+        where T : class
     {
-        var key = $"user:email:{email}";
-        if (_cache.TryGetValue(key, out User? cached))
-        {
-            return cached;
-        }
+        var cacheKey = await BuildCacheKeyAsync(key, ct);
 
-        var user = await _inner.GetByEmailAsync(email, cancellationToken);
-        if (user is not null)
-        {
-            Set(key, user);
-        }
+        var json = await _cache.GetStringAsync(cacheKey, ct);
 
-        return user;
+        if (json is not null)
+            return JsonSerializer.Deserialize<T>(json, JsonOptions);
+
+        var value = await factory();
+
+        if (value is null)
+            return null;
+
+        json = JsonSerializer.Serialize(value, JsonOptions);
+
+        await _cache.SetStringAsync(
+            cacheKey,
+            json,
+            new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheDuration
+            },
+            ct);
+
+        return value;
     }
 
-    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    private async Task<string> BuildCacheKeyAsync(string key, CancellationToken ct)
     {
-        var key = $"user:id:{id}";
-        if (_cache.TryGetValue(key, out User? cached))
-        {
-            return cached;
-        }
-
-        var user = await _inner.GetByIdAsync(id, cancellationToken);
-        if (user is not null)
-        {
-            Set(key, user);
-        }
-
-        return user;
+        var version = await GetVersionAsync(ct);
+        return $"{key}:v{version}";
     }
 
-    public async Task<IReadOnlyList<User>> GetPageAsync(Guid? cursor, int pageSize, CancellationToken cancellationToken)
+    private async Task<string> GetVersionAsync(CancellationToken ct)
     {
-        var key = $"user:page:{cursor}:{pageSize}";
-        if (_cache.TryGetValue(key, out IReadOnlyList<User>? cached) && cached is not null)
-        {
-            return cached;
-        }
+        var version = await _cache.GetStringAsync(VersionKey, ct);
 
-        var page = await _inner.GetPageAsync(cursor, pageSize, cancellationToken);
-        Set(key, page);
-        return page;
+        if (!string.IsNullOrWhiteSpace(version))
+            return version;
+
+        version = Guid.NewGuid().ToString("N");
+
+        await _cache.SetStringAsync(VersionKey, version, ct);
+
+        return version;
     }
 
-    public async Task AddAsync(User user, CancellationToken cancellationToken)
+    private Task InvalidateAsync(CancellationToken ct) =>
+        _cache.SetStringAsync(
+            VersionKey,
+            Guid.NewGuid().ToString("N"),
+            ct);
+
+    #endregion
+
+    #region Public Methods
+
+    public Task<User?> GetByIdAsync(Guid id, CancellationToken ct) =>
+        GetOrCreateAsync(
+            $"user:id:{id}",
+            () => _inner.GetByIdAsync(id, ct),
+            ct);
+
+    public Task<User?> GetByEmailAsync(string email, CancellationToken ct) =>
+        GetOrCreateAsync(
+            $"user:email:{email}",
+            () => _inner.GetByEmailAsync(email, ct),
+            ct);
+
+    public async Task<IReadOnlyList<User>> GetPageAsync(Guid? cursor, int pageSize, CancellationToken ct)
     {
-        await _inner.AddAsync(user, cancellationToken);
-        _invalidator.InvalidateAll();
+        var page = await GetOrCreateAsync(
+            $"user:page:{cursor}:{pageSize}",
+            async () => (await _inner.GetPageAsync(cursor, pageSize, ct)).ToList(),
+            ct);
+        return page ?? [];
     }
 
-    public async Task UpdateAsync(User user, CancellationToken cancellationToken)
+    public async Task AddAsync(User user, CancellationToken ct)
     {
-        await _inner.UpdateAsync(user, cancellationToken);
-        _invalidator.InvalidateAll();
+        await _inner.AddAsync(user, ct);
+        await InvalidateAsync(ct);
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)
+    public async Task UpdateAsync(User user, CancellationToken ct)
     {
-        await _inner.DeleteAsync(id, cancellationToken);
-        _invalidator.InvalidateAll();
+        await _inner.UpdateAsync(user, ct);
+        await InvalidateAsync(ct);
     }
 
-    private void Set<T>(string key, T value)
+    public async Task DeleteAsync(Guid id, CancellationToken ct)
     {
-        using var entry = _cache.CreateEntry(key);
-        entry.Value = value;
-        entry.AbsoluteExpirationRelativeToNow = CacheDuration;
-        entry.AddExpirationToken(_invalidator.CurrentToken);
+        await _inner.DeleteAsync(id, ct);
+        await InvalidateAsync(ct);
     }
+
+    #endregion
 }

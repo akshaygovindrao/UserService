@@ -5,14 +5,24 @@ namespace UserService.Middleware;
 
 public class GlobalExceptionHandler
 {
+    #region Fields
+
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionHandler> _logger;
+
+    #endregion
+
+    #region Constructors
 
     public GlobalExceptionHandler(RequestDelegate next, ILogger<GlobalExceptionHandler> logger)
     {
         _next = next;
         _logger = logger;
     }
+
+    #endregion
+
+    #region Public Methods
 
     public async Task InvokeAsync(HttpContext httpContext)
     {
@@ -47,4 +57,6 @@ public class GlobalExceptionHandler
             });
         }
     }
+
+    #endregion
 }

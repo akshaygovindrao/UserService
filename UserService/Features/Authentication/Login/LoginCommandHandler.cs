@@ -8,10 +8,16 @@ namespace UserService.Features.Authentication.Login;
 
 public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
 {
+    #region Fields
+
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _tokenGenerator;
     private readonly IRefreshTokenService _refreshTokenService;
+
+    #endregion
+
+    #region Constructors
 
     public LoginCommandHandler(
         IUserRepository userRepository,
@@ -24,6 +30,10 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
         _tokenGenerator = tokenGenerator;
         _refreshTokenService = refreshTokenService;
     }
+
+    #endregion
+
+    #region Public Methods
 
     public async Task<AuthResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
@@ -38,4 +48,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
 
         return new AuthResponse(accessToken, refreshToken);
     }
+
+    #endregion
 }
