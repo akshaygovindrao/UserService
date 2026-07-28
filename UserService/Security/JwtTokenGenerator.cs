@@ -9,12 +9,22 @@ namespace UserService.Security;
 
 public class JwtTokenGenerator : IJwtTokenGenerator
 {
+    #region Fields
+
     private readonly JwtSettings _settings;
+
+    #endregion
+
+    #region Constructors
 
     public JwtTokenGenerator(IOptions<JwtSettings> settings)
     {
         _settings = settings.Value;
     }
+
+    #endregion
+
+    #region Public Methods
 
     public string GenerateToken(User user)
     {
@@ -37,4 +47,6 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    #endregion
 }

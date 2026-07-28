@@ -5,7 +5,13 @@ namespace UserService.Security;
 
 public class PasswordHasher : IPasswordHasher
 {
+    #region Fields
+
     private readonly Microsoft.AspNetCore.Identity.PasswordHasher<User> _identityHasher = new();
+
+    #endregion
+
+    #region Public Methods
 
     public string Hash(string password)
     {
@@ -17,4 +23,6 @@ public class PasswordHasher : IPasswordHasher
         var result = _identityHasher.VerifyHashedPassword(new User(), hashedPassword, providedPassword);
         return result is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
     }
+
+    #endregion
 }

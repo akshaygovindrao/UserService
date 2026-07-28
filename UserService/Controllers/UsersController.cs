@@ -10,12 +10,22 @@ namespace UserService.Controllers;
 [Authorize]
 public class UsersController : ControllerBase
 {
+    #region Fields
+
     private readonly IMediator _mediator;
+
+    #endregion
+
+    #region Constructors
 
     public UsersController(IMediator mediator)
     {
         _mediator = mediator;
     }
+
+    #endregion
+
+    #region Public Methods
 
     // GET api/users?cursor=&pageSize=
     [HttpGet]
@@ -25,4 +35,6 @@ public class UsersController : ControllerBase
         var response = await _mediator.Send(new GetAllUsersQuery(cursor, clampedPageSize));
         return Ok(response);
     }
+
+    #endregion
 }

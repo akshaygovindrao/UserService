@@ -9,8 +9,14 @@ namespace UserService.Features.Authentication.Register;
 
 public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterResponse>
 {
+    #region Fields
+
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
+
+    #endregion
+
+    #region Constructors
 
     public RegisterCommandHandler(
         IUserRepository userRepository,
@@ -19,6 +25,10 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
     }
+
+    #endregion
+
+    #region Public Methods
 
     public async Task<RegisterResponse> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
@@ -40,4 +50,6 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
 
         return new RegisterResponse("User registered successfully.");
     }
+
+    #endregion
 }
