@@ -5,12 +5,22 @@ namespace UserService.Data;
 
 public class UserRepository : IUserRepository
 {
+    #region Fields
+
     private readonly UserServiceDbContext _dbContext;
+
+    #endregion
+
+    #region Constructors
 
     public UserRepository(UserServiceDbContext dbContext)
     {
         _dbContext = dbContext;
     }
+
+    #endregion
+
+    #region Public Methods
 
     public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
     {
@@ -59,4 +69,6 @@ public class UserRepository : IUserRepository
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
+
+    #endregion
 }

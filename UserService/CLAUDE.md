@@ -13,6 +13,11 @@
 - Use async/await for all I/O.
 - Unhandled exceptions are caught by `GlobalExceptionHandler` middleware — don't add redundant try/catch in controllers for exceptions it already maps (`UserAlreadyExistsException`, `InvalidCredentialsException`).
 
+## Code Style
+
+- Organize class members into named `#region` blocks, in this order: `Fields`, `Constructors`, `Private Methods`, `Public Methods`.
+- Within the class, private methods come before public methods.
+
 ## Security
 
 - Never log or expose sensitive data (passwords, tokens, connection strings).

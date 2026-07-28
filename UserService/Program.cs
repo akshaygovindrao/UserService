@@ -3,12 +3,10 @@ using System.Text;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.IdentityModel.Tokens;
-using UserService.Common.Caching;
 using UserService.Data;
 using UserService.Data.Caching;
-using UserService.Domain;
 using UserService.Middleware;
 using UserService.Security;
 
@@ -31,7 +29,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "Enter the JWT token returned from /login or /register."
+        Description = "Enter the JWT access token returned from /login."
     });
 
     options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
@@ -53,13 +51,18 @@ builder.Services.AddMediatR(typeof(Program));
 
 builder.Services.AddDbContextPool<UserServiceDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddMemoryCache();
-builder.Services.AddSingleton(typeof(ICacheInvalidator<>), typeof(CacheInvalidator<>));
+
+builder.Services.Configure<RefreshTokenSettings>(builder.Configuration.GetSection(RefreshTokenSettings.SectionName));
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+});
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IUserRepository>(sp => new CachedUserRepository(
     sp.GetRequiredService<UserRepository>(),
-    sp.GetRequiredService<IMemoryCache>(),
-    sp.GetRequiredService<ICacheInvalidator<User>>()));
+    sp.GetRequiredService<IDistributedCache>()));
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));

@@ -35,3 +35,8 @@ The app launches to the Swagger UI by default (see `Properties/launchSettings.js
   - New use cases should follow this same pattern: a `Features/<Area>/<UseCase>/` folder containing the `IRequest`-implementing command/query record and its `IRequestHandler` side by side.
 - `Dtos/` — plain C# records used as HTTP request/response contracts: `RegisterRequest(string Email, string Password)`, `LoginRequest(string Email, string Password)`, `AuthResponse(string Token)`. Commands reuse `AuthResponse` as their result type where a token is returned.
 - No database, EF Core, identity provider, or JWT/cookie auth scheme is configured yet, despite `UseAuthorization()` being present in the pipeline — there's no corresponding `AddAuthentication()`/`AddAuthorization()` setup or auth scheme configured. All handlers currently throw `NotImplementedException`; when implementing real auth, this wiring and the handler bodies will need to be filled in.
+
+## Code Style
+
+- Organize class members into named `#region` blocks, in this order: `Fields`, `Constructors`, `Private Methods`, `Public Methods`.
+- Within the class, private methods come before public methods.

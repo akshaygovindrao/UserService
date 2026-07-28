@@ -4,14 +4,13 @@ using UserService.Data;
 using UserService.Dtos;
 using UserService.Security;
 
-namespace UserService.Features.Authentication.Login;
+namespace UserService.Features.Authentication.Refresh;
 
-public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
+public class RefreshCommandHandler : IRequestHandler<RefreshCommand, AuthResponse>
 {
     #region Fields
 
     private readonly IUserRepository _userRepository;
-    private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _tokenGenerator;
     private readonly IRefreshTokenService _refreshTokenService;
 
@@ -19,14 +18,12 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
 
     #region Constructors
 
-    public LoginCommandHandler(
+    public RefreshCommandHandler(
         IUserRepository userRepository,
-        IPasswordHasher passwordHasher,
         IJwtTokenGenerator tokenGenerator,
         IRefreshTokenService refreshTokenService)
     {
         _userRepository = userRepository;
-        _passwordHasher = passwordHasher;
         _tokenGenerator = tokenGenerator;
         _refreshTokenService = refreshTokenService;
     }
@@ -35,18 +32,24 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
 
     #region Public Methods
 
-    public async Task<AuthResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
+    public async Task<AuthResponse> Handle(RefreshCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
-        if (user is null || !_passwordHasher.Verify(user.PasswordHash, request.Password))
+        var userId = await _refreshTokenService.ValidateAndRotateAsync(request.RefreshToken, cancellationToken);
+        if (userId is null)
+        {
+            throw new InvalidCredentialsException();
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
+        if (user is null)
         {
             throw new InvalidCredentialsException();
         }
 
         var accessToken = _tokenGenerator.GenerateToken(user);
-        var refreshToken = await _refreshTokenService.GenerateAndStoreAsync(user.Id, cancellationToken);
+        var newRefreshToken = await _refreshTokenService.GenerateAndStoreAsync(user.Id, cancellationToken);
 
-        return new AuthResponse(accessToken, refreshToken);
+        return new AuthResponse(accessToken, newRefreshToken);
     }
 
     #endregion
